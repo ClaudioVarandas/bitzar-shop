@@ -1,0 +1,52 @@
+services:
+    app:
+        build:
+            context: docker/php83
+            target: development
+            args:
+                # UID and GID must be set as environment variables on the host machine
+                USER_ID: "${UID:-1000}"
+                GROUP_ID: "${GID:-1000}"
+        volumes:
+            - .:/var/www/html
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        ports:
+            - '${APP_PORT:-808}:8080'
+            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
+        restart: always
+        environment:
+            PHP_OPCACHE_ENABLE: 1
+            SSL_MODE: "off"
+            LOG_OUTPUT_LEVEL: "debug"
+        depends_on:
+            db:
+                condition: service_healthy
+        networks:
+            - development
+    db:
+        image: postgres:16-alpine3.20
+        restart: always
+        environment:
+            POSTGRES_USER: bitzar
+            POSTGRES_PASSWORD: bitzar
+            POSTGRES_DB: bitzar
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+        healthcheck:
+            test: [ "CMD-SHELL", "pg_isready -d bitzar -U bitzar" ]
+            interval: 1s
+            timeout: 5s
+            retries: 10
+        networks:
+            - development
+        ports:
+            - '5432:5432'
+
+networks:
+    development:
+volumes:
+    pgdata:
+
+
+
